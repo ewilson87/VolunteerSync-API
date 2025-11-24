@@ -1,11 +1,15 @@
-
 import { createPool, Pool } from 'mysql';
+
 let pool: Pool | null = null;
 
-// Initialize the MySQL connector
+/**
+ * Initializes the MySQL connection pool using environment variables.
+ * Verifies connectivity by attempting to get and release a connection.
+ * 
+ * @throws {Error} If pool creation or connection verification fails
+ */
 const initializeMysqlConnector = () => {
     try {
-        // Create a connection pool with the specified configuration
         pool = createPool({
             connectionLimit:
                 parseInt(process.env.MY_SQL_DB_CONNECTION_LIMIT != undefined ? process.env.MY_SQL_DB_CONNECTION_LIMIT : ""),
@@ -17,11 +21,9 @@ const initializeMysqlConnector = () => {
             database: process.env.MY_SQL_DB_DATABASE,
         });
 
-        // Log a debug message indicating that the pool has been generated successfully
         console.debug('MySql Adapter Pool generated successfully');
         console.log('process.env.DB_DATABASE', process.env.MY_SQL_DB_DATABASE);
 
-        // Get a connection from the pool
         pool.getConnection((err, connection) => {
             if (err) {
                 console.log('error mysql failed to connect');
@@ -38,21 +40,25 @@ const initializeMysqlConnector = () => {
     }
 };
 
-// Execute a MySQL query
+/**
+ * Executes a parameterized MySQL query using the connection pool.
+ * Automatically initializes the pool if it hasn't been created yet.
+ * 
+ * @template T - The expected return type of the query results
+ * @param {string} query - SQL query string with parameter placeholders (?)
+ * @param {string[] | Object} params - Parameters to bind to the query
+ * @returns {Promise<T>} Promise that resolves with query results
+ * @throws {Error} If query execution fails
+ */
 export const execute = <T>(query: string, params: string[] | Object): Promise<T> => {
     try {
-        // If the pool is not initialized, initialize it
         if (!pool) {
             initializeMysqlConnector();
         }
 
-        // Return a promise that resolves to the query results
         return new Promise<T>((resolve, reject) => {
-            // Execute the query with the provided parameters
             pool!.query(query, params, (error, results) => {
-                // If there is an error, reject the promise with the error
                 if (error) reject(error);
-                // Otherwise, resolve the promise with the query results
                 else resolve(results);
             });
         });

@@ -1,31 +1,51 @@
 export const organizationQueries = {
-    // Query to fetch all organizations
     readOrganizations: `
-        SELECT 
-            organization_id AS organizationId, name, description, 
-            contact_email AS contactEmail, contact_phone AS contactPhone, 
-            website, created_at AS createdAt, updated_at AS updatedAt
+        SELECT
+            organization_id AS organizationId,
+            name,
+            description,
+            contact_email AS contactEmail,
+            contact_phone AS contactPhone,
+            website,
+            approval_status AS approvalStatus,
+            approved_by AS approvedBy,
+            approved_at AS approvedAt,
+            rejection_reason AS rejectionReason,
+            created_at AS createdAt,
+            updated_at AS updatedAt
         FROM volunteersync.organizations
     `,
 
-    // Query to fetch a specific organization by ID
     readOrganizationById: `
         SELECT 
             organization_id AS organizationId, name, description, 
             contact_email AS contactEmail, contact_phone AS contactPhone, 
-            website, created_at AS createdAt, updated_at AS updatedAt
+            website, approval_status AS approvalStatus,
+            approved_by AS approvedBy, approved_at AS approvedAt,
+            rejection_reason AS rejectionReason,
+            created_at AS createdAt, updated_at AS updatedAt
         FROM volunteersync.organizations
         WHERE organization_id = ?
     `,
 
-    // Query to insert a new organization
+    readOrganizationByName: `
+        SELECT 
+            organization_id AS organizationId, name, description, 
+            contact_email AS contactEmail, contact_phone AS contactPhone, 
+            website, approval_status AS approvalStatus,
+            approved_by AS approvedBy, approved_at AS approvedAt,
+            rejection_reason AS rejectionReason,
+            created_at AS createdAt, updated_at AS updatedAt
+        FROM volunteersync.organizations
+        WHERE name = ?
+    `,
+
     createOrganization: `
         INSERT INTO volunteersync.organizations 
             (name, description, contact_email, contact_phone, website)
         VALUES (?, ?, ?, ?, ?)
     `,
 
-    // Query to update an existing organization
     updateOrganization: `
         UPDATE volunteersync.organizations
         SET name = ?, description = ?, contact_email = ?, 
@@ -33,7 +53,16 @@ export const organizationQueries = {
         WHERE organization_id = ?
     `,
 
-    // Query to delete an organization
+    updateApprovalStatus: `
+        UPDATE volunteersync.organizations
+        SET approval_status = ?, 
+            approved_by = ?,
+            approved_at = ?,
+            rejection_reason = ?,
+            updated_at = NOW()
+        WHERE organization_id = ?
+    `,
+
     deleteOrganization: `
         DELETE FROM volunteersync.organizations
         WHERE organization_id = ?

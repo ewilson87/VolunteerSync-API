@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import * as EventsController from './events.controller';
+import { authenticateToken, requireEventOrganizerOrAdmin, requireOrganizerForBodyOrganizationOrAdmin } from '../middleware/auth.middleware';
 
 const router = Router();
 
+// Public routes (no authentication required)
 // GET /events - Retrieve all events
 router.
     route('/events').
@@ -18,19 +20,20 @@ router.
     route('/events/:eventId').
     get(EventsController.readEventById);
 
-// POST /events - Create a new event (Organizer only)
+// Protected routes
+// POST /events - Create a new event (Organizer for organization or Admin only)
 router.
     route('/events').
-    post(EventsController.createEvent);
+    post(authenticateToken, requireOrganizerForBodyOrganizationOrAdmin, EventsController.createEvent);
 
-// PUT /events - Update an existing event (Organizer only)
+// PUT /events - Update an existing event (Organizer for organization or Admin only)
 router.
     route('/events').
-    put(EventsController.updateEvent);
+    put(authenticateToken, requireEventOrganizerOrAdmin, EventsController.updateEvent);
 
-// DELETE /events/:eventId - Delete an event (Organizer/Admin only)
+// DELETE /events/:eventId - Delete an event (Organizer for event's organization or Admin only)
 router.
     route('/events/:eventId').
-    delete(EventsController.deleteEvent);
+    delete(authenticateToken, requireEventOrganizerOrAdmin, EventsController.deleteEvent);
 
 export default router;

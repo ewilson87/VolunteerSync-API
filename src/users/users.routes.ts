@@ -1,36 +1,61 @@
 import { Router } from 'express';
 import * as UsersController from './users.controller';
+import { authenticateToken, requireAdmin, requireUserOrAdmin } from '../middleware/auth.middleware';
+import { authLimiter, registerLimiter } from '../middleware/rate-limit.middleware';
+import { commonValidations, validate } from '../middleware/validation.middleware';
 
 const router = Router();
 
-// GET /users - Retrieve all users (Admin only)
 router.
-    route('/users').
-    get(UsersController.readUsers);
+    route('/users/login').
+    post(
+        authLimiter,
+        commonValidations.email,
+        commonValidations.passwordLogin,
+        validate,
+        UsersController.login
+    );
 
-// GET /users/:userId - Retrieve a specific user by ID
-router.
-    route('/users/:userId').
-    get(UsersController.readUserById);
-
-// GET /users/email/:email - Retrieve a user by email (For authentication)
-router.
-    route('/users/email/:email').
-    get(UsersController.readUserByEmail);
-
-// POST /users/register - Register a new user
 router.
     route('/users/register').
-    post(UsersController.createUser);
+    post(
+        registerLimiter,
+        commonValidations.firstName,
+        commonValidations.lastName,
+        commonValidations.email,
+        commonValidations.password,
+        commonValidations.role,
+        validate,
+        UsersController.createUser
+    );
 
-// PUT /users - Update an existing user
 router.
     route('/users').
-    put(UsersController.updateUser);
+    get(authenticateToken, requireAdmin, UsersController.readUsers);
 
-// DELETE /users/:userId - Delete a user (Admin only)
 router.
     route('/users/:userId').
-    delete(UsersController.deleteUser);
+    get(authenticateToken, requireUserOrAdmin, UsersController.readUserById);
+
+router.
+    route('/users/email/:email').
+    get(authenticateToken, requireAdmin, UsersController.readUserByEmail);
+
+router.
+    route('/users').
+    put(
+        authenticateToken,
+        commonValidations.passwordOptional,
+        validate,
+        UsersController.updateUser
+    );
+
+router.
+    route('/users/:userId').
+    delete(authenticateToken, requireAdmin, UsersController.deleteUser);
+
+router.
+    route('/users/:userId/link-organization').
+    post(authenticateToken, requireAdmin, UsersController.linkUserToOrganization);
 
 export default router;

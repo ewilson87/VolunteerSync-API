@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import * as OrganizationsController from './organizations.controller';
+import { authenticateToken, requireOrganizerOrAdmin } from '../middleware/auth.middleware';
 
 const router = Router();
 
+// Public routes (no authentication required)
 // GET /organizations - Retrieve all organizations
 router.
     route('/organizations').
@@ -13,19 +15,25 @@ router.
     route('/organizations/:organizationId').
     get(OrganizationsController.readOrganizationById);
 
-// POST /organizations - Create a new organization
+// GET /organizations/name/:name - Retrieve a specific organization by name
+router.
+    route('/organizations/name/:name').
+    get(OrganizationsController.readOrganizationByName);
+
+// Protected routes
+// POST /organizations - Create a new organization (Organizer for organization or Admin only)
 router.
     route('/organizations').
-    post(OrganizationsController.createOrganization);
+    post(authenticateToken, requireOrganizerOrAdmin, OrganizationsController.createOrganization);
 
-// PUT /organizations - Update an existing organization
+// PUT /organizations - Update an existing organization (Organizer for organization or Admin only)
 router.
     route('/organizations').
-    put(OrganizationsController.updateOrganization);
+    put(authenticateToken, requireOrganizerOrAdmin, OrganizationsController.updateOrganization);
 
-// DELETE /organizations/:organizationId - Delete an organization
+// DELETE /organizations/:organizationId - Delete an organization (Organizer for organization or Admin only)
 router.
     route('/organizations/:organizationId').
-    delete(OrganizationsController.deleteOrganization);
+    delete(authenticateToken, requireOrganizerOrAdmin, OrganizationsController.deleteOrganization);
 
 export default router;

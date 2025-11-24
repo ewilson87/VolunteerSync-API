@@ -1,9 +1,16 @@
 import { Request, RequestHandler, Response } from 'express';
 import { Event } from './events.model';
 import * as EventsDao from './events.dao';
+import * as OrganizationsDao from '../organizations/organizations.dao';
 import { OkPacket } from 'mysql';
 
-// Handler to fetch all events
+/**
+ * Retrieves all events from the database.
+ * 
+ * @route GET /events
+ * @access Public
+ * @returns {Promise<void>} JSON array of all events
+ */
 export const readEvents: RequestHandler = async (req: Request, res: Response) => {
     try {
         const events = await EventsDao.readEvents();
@@ -16,7 +23,14 @@ export const readEvents: RequestHandler = async (req: Request, res: Response) =>
     }
 };
 
-// Handler to fetch an event by ID
+/**
+ * Retrieves a specific event by ID.
+ * 
+ * @route GET /events/:eventId
+ * @access Public
+ * @param {number} req.params.eventId - The ID of the event to retrieve
+ * @returns {Promise<void>} JSON object containing event data
+ */
 export const readEventById: RequestHandler = async (req: Request, res: Response) => {
     try {
         const eventId = parseInt(req.params.eventId as string);
@@ -32,7 +46,17 @@ export const readEventById: RequestHandler = async (req: Request, res: Response)
     }
 };
 
-// Handler to search events by city, state, date, and/or organization
+/**
+ * Searches events by city, state, date, and/or organization ID.
+ * 
+ * @route GET /events/search
+ * @access Public
+ * @param {string} [req.query.city] - City to filter by
+ * @param {string} [req.query.state] - State to filter by (2-letter code)
+ * @param {string} [req.query.date] - Date to filter by (ISO 8601 format)
+ * @param {number} [req.query.organizationId] - Organization ID to filter by
+ * @returns {Promise<void>} JSON array of matching events
+ */
 export const searchEvents: RequestHandler = async (req: Request, res: Response) => {
     try {
         const { city, state, date, organizationId } = req.query;
@@ -48,9 +72,31 @@ export const searchEvents: RequestHandler = async (req: Request, res: Response) 
     }
 };
 
-// Handler to create a new event
+/**
+ * Creates a new event.
+ * Requires the associated organization to have 'approved' status.
+ * 
+ * @route POST /events
+ * @access Private (Organizer for organization or Admin)
+ * @param {Object} req.body - Event data including title, description, eventDate, etc.
+ * @returns {Promise<void>} JSON object with creation result
+ */
 export const createEvent: RequestHandler = async (req: Request, res: Response) => {
     try {
+        const organizationId = req.body.organizationId;
+        if (organizationId) {
+            const organizations = await OrganizationsDao.readOrganizationById(organizationId);
+            if (organizations && organizations.length > 0) {
+                const organization = organizations[0];
+                if (organization.approvalStatus !== 'approved') {
+                    res.status(403).json({
+                        message: `Cannot create events for organizations with ${organization.approvalStatus} approval status. Only approved organizations can create events.`
+                    });
+                    return;
+                }
+            }
+        }
+
         const okPacket: OkPacket = await EventsDao.createEvent(req.body);
         res.status(201).json(okPacket);
     } catch (error: any) {
@@ -70,9 +116,50 @@ export const createEvent: RequestHandler = async (req: Request, res: Response) =
     }
 };
 
-// Handler to update an existing event
+/**
+ * Updates an existing event.
+ * Requires the associated organization to have 'approved' status.
+ * 
+ * @route PUT /events
+ * @access Private (Organizer for event's organization or Admin)
+ * @param {number} req.body.eventId - The ID of the event to update
+ * @param {Object} req.body - Updated event data
+ * @returns {Promise<void>} JSON object with update result
+ */
 export const updateEvent: RequestHandler = async (req: Request, res: Response) => {
     try {
+        const eventId = req.body.eventId;
+        if (!eventId) {
+            res.status(400).json({
+                message: 'Event ID is required'
+            });
+            return;
+        }
+
+        const events = await EventsDao.readEventById(eventId);
+        if (!events || events.length === 0) {
+            res.status(404).json({
+                message: 'Event not found'
+            });
+            return;
+        }
+
+        const existingEvent = events[0];
+        const organizationId = existingEvent.organizationId;
+
+        if (organizationId) {
+            const organizations = await OrganizationsDao.readOrganizationById(organizationId);
+            if (organizations && organizations.length > 0) {
+                const organization = organizations[0];
+                if (organization.approvalStatus !== 'approved') {
+                    res.status(403).json({
+                        message: `Cannot update events for organizations with ${organization.approvalStatus} approval status. Only approved organizations can update events.`
+                    });
+                    return;
+                }
+            }
+        }
+
         const okPacket: OkPacket = await EventsDao.updateEvent(req.body);
         res.status(200).json(okPacket);
     } catch (error: any) {
@@ -92,7 +179,14 @@ export const updateEvent: RequestHandler = async (req: Request, res: Response) =
     }
 };
 
-// Handler to delete an event
+/**
+ * Deletes an event from the database.
+ * 
+ * @route DELETE /events/:eventId
+ * @access Private (Organizer for event's organization or Admin)
+ * @param {number} req.params.eventId - The ID of the event to delete
+ * @returns {Promise<void>} JSON object with deletion result
+ */
 export const deleteEvent: RequestHandler = async (req: Request, res: Response) => {
     try {
         const eventId = parseInt(req.params.eventId as string);

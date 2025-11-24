@@ -3,36 +3,68 @@ import { execute } from '../services/mysql.connector';
 import { User } from './users.model';
 import { userQueries } from './users.queries';
 
-// Fetch all users from the database (Admin only)
+/**
+ * Retrieves all users from the database.
+ * @returns {Promise<User[]>} Array of all user objects
+ */
 export const readUsers = async () => {
     return execute<User[]>(userQueries.readUsers, []);
 };
 
-// Fetch a specific user by ID
+/**
+ * Retrieves a specific user by their ID.
+ * @param {number} userId - The unique identifier of the user
+ * @returns {Promise<User[]>} Array containing the user object (or empty array if not found)
+ */
 export const readUserById = async (userId: number) => {
     return execute<User[]>(userQueries.readUserById, [userId]);
 };
 
-// Fetch a user by email (For authentication)
+/**
+ * Retrieves a user by their email address (case-insensitive).
+ * @param {string} email - The email address to search for
+ * @returns {Promise<User[]>} Array containing the user object (or empty array if not found)
+ */
 export const readUserByEmail = async (email: string) => {
     return execute<User[]>(userQueries.readUserByEmail, [email]);
 };
 
-// Create a new user in the database
+/**
+ * Creates a new user in the database.
+ * @param {User} user - User object containing all required fields (passwordHash must be pre-hashed)
+ * @returns {Promise<OkPacket>} MySQL result packet with insertId
+ */
 export const createUser = async (user: User) => {
     return execute<OkPacket>(userQueries.createUser, [
-        user.firstName, user.lastName, user.email, user.passwordHash, user.role, user.organizationId || null // Ensure null if not provided
+        user.firstName, user.lastName, user.email, user.passwordHash, user.role, user.organizationId || null
     ]);
 };
 
-// Update an existing user
+/**
+ * Updates an existing user's information in the database.
+ * @param {User} user - User object with updated fields (must include userId)
+ * @returns {Promise<OkPacket>} MySQL result packet with affected rows
+ */
 export const updateUser = async (user: User) => {
     return execute<OkPacket>(userQueries.updateUser, [
         user.firstName, user.lastName, user.email, user.passwordHash, user.role, user.organizationId || null, user.userId
     ]);
 };
 
-// Delete a user from the database (Admin only)
+/**
+ * Deletes a user from the database.
+ * @param {number} userId - The unique identifier of the user to delete
+ * @returns {Promise<OkPacket>} MySQL result packet with affected rows
+ */
 export const deleteUser = async (userId: number) => {
     return execute<OkPacket>(userQueries.deleteUser, [userId]);
+};
+
+/**
+ * Updates a user's last_login timestamp to the current time.
+ * @param {number} userId - The unique identifier of the user
+ * @returns {Promise<OkPacket>} MySQL result packet with affected rows
+ */
+export const updateLastLogin = async (userId: number) => {
+    return execute<OkPacket>(userQueries.updateLastLogin, [userId]);
 };

@@ -4,7 +4,7 @@ export const userQueries = {
         SELECT 
             user_id AS userId, first_name AS firstName, last_name AS lastName, 
             email, password_hash AS passwordHash, role, 
-            last_login AS lastLogin, created_at AS createdAt, updated_at AS updatedAt
+            last_login AS lastLogin, created_at AS createdAt, updated_at AS updatedAt, organization_id AS organizationId 
         FROM volunteersync.users
     `,
 
@@ -13,19 +13,18 @@ export const userQueries = {
         SELECT 
             user_id AS userId, first_name AS firstName, last_name AS lastName, 
             email, password_hash AS passwordHash, role, 
-            last_login AS lastLogin, created_at AS createdAt, updated_at AS updatedAt
+            last_login AS lastLogin, created_at AS createdAt, updated_at AS updatedAt, organization_id AS organizationId
         FROM volunteersync.users
         WHERE user_id = ?
     `,
 
-    // Query to fetch a user by email (for authentication)
     readUserByEmail: `
         SELECT 
             user_id AS userId, first_name AS firstName, last_name AS lastName, 
             email, password_hash AS passwordHash, role, 
-            last_login AS lastLogin, created_at AS createdAt, updated_at AS updatedAt
+            last_login AS lastLogin, created_at AS createdAt, updated_at AS updatedAt, organization_id AS organizationId
         FROM volunteersync.users
-        WHERE email = ?
+        WHERE LOWER(email) = LOWER(?)
     `,
 
     // Query to insert a new user
@@ -45,6 +44,13 @@ export const userQueries = {
     // Query to delete a user
     deleteUser: `
         DELETE FROM volunteersync.users
+        WHERE user_id = ?
+    `,
+
+    // Query to update user's last login timestamp
+    updateLastLogin: `
+        UPDATE volunteersync.users
+        SET last_login = NOW()
         WHERE user_id = ?
     `
 };
