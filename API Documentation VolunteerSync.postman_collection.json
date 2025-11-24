@@ -1,0 +1,1800 @@
+{
+	"info": {
+		"_postman_id": "f7fecaa8-954a-49a0-97d5-d0587651fe84",
+		"name": "VolunteerSync API",
+		"description": "VolunteerSync API - Complete REST API documentation with JWT authentication, security features, and all modules including support messages, event attendance, and certificates.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "34428547"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{jwt_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "Login User",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 200) {",
+							"    var jsonData = pm.response.json();",
+							"    pm.collectionVariables.set(\"jwt_token\", jsonData.token);",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"admin@example.com\",\n    \"password\": \"password\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/users/login",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"users",
+						"login"
+					]
+				},
+				"description": "### Login User\n\nAuthenticates a user and returns a JWT token. The token is automatically saved to the collection variable `jwt_token` for use in subsequent requests.\n\n#### Request Body\n\n- `email` (string): User's email address\n- `password` (string): User's plain text password\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\n```json\n{\n    \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"user\": {\n        \"userId\": 1,\n        \"firstName\": \"Admin\",\n        \"lastName\": \"User\",\n        \"email\": \"admin@example.com\",\n        \"role\": \"admin\",\n        \"organizationId\": null\n    }\n}\n```\n\n**Note:** The JWT token expires after 24 hours. Use the token in the Authorization header for protected endpoints: `Authorization: Bearer <token>`"
+			},
+			"response": []
+		},
+		{
+			"name": "Get Users",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/users",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"users"
+					],
+					"query": [
+						{
+							"key": "",
+							"value": "",
+							"disabled": true
+						}
+					]
+				},
+				"description": "### Get All Users\n\nRetrieves a list of all users. **Requires admin authentication.**\n\n#### Authentication\n\n- Header: `Authorization: Bearer <jwt_token>`\n- Access: Admin only\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns an array of user objects with the following properties:\n\n- `userId` (number): Unique identifier\n- `firstName` (string): User's first name\n- `lastName` (string): User's last name\n- `email` (string): User's email address\n- `passwordHash` (string): Hashed password (for security)\n- `role` (string): User role (volunteer, organizer, or admin)\n- `lastLogin` (string | null): Timestamp of last login\n- `createdAt` (string): Account creation timestamp\n- `updatedAt` (string): Last update timestamp\n- `organizationId` (number | null): Associated organization ID (for organizers)"
+			},
+			"response": []
+		},
+		{
+			"name": "Get Users/:id",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/users/:user_id",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"users",
+						":user_id"
+					],
+					"variable": [
+						{
+							"key": "user_id",
+							"value": "1"
+						}
+					]
+				},
+				"description": "### Get User Details\n\nRetrieves details of a specific user. **Requires authentication.**\n\n#### Authentication\n\n- Header: `Authorization: Bearer <jwt_token>`\n- Access: Users can view their own data, organizers can view limited data (userId, firstName, lastName, email) of any user, admins can view full data of any user\n\n#### Path Parameters\n\n- `user_id` (integer): The unique identifier of the user\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns an array with one user object. Organizers viewing other users will receive limited data:\n\n```json\n[\n  {\n    \"userId\": 1,\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"email\": \"john@example.com\",\n    \"passwordHash\": \"$2b$10$...\",\n    \"role\": \"volunteer\",\n    \"lastLogin\": \"2025-01-15T10:30:00.000Z\",\n    \"createdAt\": \"2025-01-01T00:00:00.000Z\",\n    \"updatedAt\": \"2025-01-15T10:30:00.000Z\",\n    \"organizationId\": null\n  }\n]\n```"
+			},
+			"response": []
+		},
+		{
+			"name": "Get Users/email/:email",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/users/email/:email",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"users",
+						"email",
+						":email"
+					],
+					"variable": [
+						{
+							"key": "email",
+							"value": "admin@example.com"
+						}
+					]
+				},
+				"description": "### Get User by Email\n\nRetrieves user information by email address. **Requires admin authentication.**\n\n#### Authentication\n\n- Header: `Authorization: Bearer <jwt_token>`\n- Access: Admin only\n\n#### Path Parameters\n\n- `email` (string): The email address of the user\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns an array of user objects matching the email (case-insensitive)."
+			},
+			"response": []
+		},
+		{
+			"name": "Post user",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Successful POST request\", function () {",
+							"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"firstName\": \"Test\",\n    \"lastName\": \"User\",\n    \"email\": \"user@example.com\",\n    \"password\": \"SecurePass123!\",\n    \"role\": \"volunteer\"\n}\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/users/register",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"users",
+						"register"
+					]
+				},
+				"description": "### Register User\n\nRegisters a new user account. **Public endpoint - no authentication required.**\n\n#### Request Body\n\n- `firstName` (string, required): The first name of the user (1-50 characters, letters, spaces, hyphens, apostrophes only)\n- `lastName` (string, required): The last name of the user (1-50 characters, letters, spaces, hyphens, apostrophes only)\n- `email` (string, required): The email address of the user (must be unique, max 150 characters)\n- `password` (string, required): **Plain text password** (8-100 characters, must contain uppercase, lowercase, number, and special character @$!%*?&)\n- `role` (string, optional): The role of the user (volunteer, organizer, or admin). Defaults to 'volunteer'\n- `organizationId` (number, optional): Organization ID to link user to (for organizers)\n\n#### Password Requirements\n\n- Minimum 8 characters, maximum 100 characters\n- Must contain at least one uppercase letter\n- Must contain at least one lowercase letter\n- Must contain at least one number\n- Must contain at least one special character: @$!%*?&\n\n#### Response\n\n- Status: 201 Created\n- Content-Type: application/json\n\nReturns MySQL result packet with `insertId` of the created user.\n\n**Note:** The password is automatically hashed using bcrypt on the backend before storage."
+			},
+			"response": []
+		},
+		{
+			"name": "Update user",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Successful PUT request\", function () {",
+							"    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"userId\": 1,\n    \"firstName\": \"Updated\",\n    \"lastName\": \"Name\",\n    \"email\": \"updated@example.com\",\n    \"password\": \"NewSecurePass123!\",\n    \"role\": \"volunteer\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/users",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"users"
+					],
+					"query": [
+						{
+							"key": "id",
+							"value": "2",
+							"disabled": true
+						}
+					]
+				},
+				"description": "### Update User Details\n\nUpdates an existing user's information. **Requires authentication.**\n\n#### Authentication\n\n- Header: `Authorization: Bearer <jwt_token>`\n- Access: Users can update their own profile, admins can update any user\n\n#### Request Body\n\n- `userId` (number, required): The unique identifier of the user to update\n- `firstName` (string, optional): Updated first name\n- `lastName` (string, optional): Updated last name\n- `email` (string, optional): Updated email address (must be unique)\n- `password` (string, optional): **Plain text password** (if provided, must meet complexity requirements and will be hashed)\n- `role` (string, optional): Updated role\n- `organizationId` (number, optional): Updated organization ID\n\n#### Password Requirements (if updating password)\n\n- Minimum 8 characters, maximum 100 characters\n- Must contain uppercase, lowercase, number, and special character (@$!%*?&)\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns MySQL result packet with update confirmation.\n\n**Note:** If password is provided, it is automatically hashed using bcrypt before storage."
+			},
+			"response": []
+		},
+		{
+			"name": "Delete user",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Successful DELETE request\", function () {",
+							"    pm.expect(pm.response.code).to.be.oneOf([200, 202, 204]);",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/users/:userId",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"users",
+						":userId"
+					],
+					"variable": [
+						{
+							"key": "userId",
+							"value": "6"
+						}
+					]
+				},
+				"description": "### Delete User by ID\n\nDeletes a specific user. **Requires admin authentication.** If the user is an organizer with an associated organization, the organization is also deleted.\n\n#### Authentication\n\n- Header: `Authorization: Bearer <jwt_token>`\n- Access: Admin only\n\n#### Path Parameters\n\n- `userId` (integer): The unique identifier of the user to delete\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns MySQL result packet with deletion confirmation."
+			},
+			"response": []
+		},
+		{
+			"name": "Link User to Organization",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Successful POST request\", function () {",
+							"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"organizationId\": 1\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/users/:userId/link-organization",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"users",
+						":userId",
+						"link-organization"
+					],
+					"variable": [
+						{
+							"key": "userId",
+							"value": "1"
+						}
+					]
+				},
+				"description": "### Link User to Organization\n\nLinks a user to an organization and sets their role to 'organizer' if not already. **Requires admin authentication.**\n\n#### Authentication\n\n- Header: `Authorization: Bearer <jwt_token>`\n- Access: Admin only\n\n#### Path Parameters\n\n- `userId` (integer): The unique identifier of the user to link\n\n#### Request Body\n\n- `organizationId` (number, required): The ID of the organization to link the user to\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns confirmation message with userId and organizationId."
+			},
+			"response": []
+		},
+		{
+			"name": "Get events",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/events",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"events"
+					]
+				},
+				"description": "### Get All Events\n\nRetrieves a list of all events. **Public endpoint - no authentication required.**\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns an array of event objects with the following properties:\n\n- `eventId` (number): Unique identifier\n- `title` (string): Event title\n- `description` (string): Event description\n- `eventDate` (string): Event date (YYYY-MM-DD)\n- `eventTime` (string): Event time (HH:MM format)\n- `eventLengthHours` (number): Duration of event in hours (1-24)\n- `locationName` (string): Name of the location\n- `address` (string): Street address\n- `city` (string): City\n- `state` (string): State (2-letter code)\n- `numNeeded` (number): Number of volunteers needed\n- `numSignedUp` (number): Number of volunteers signed up\n- `createdBy` (number): User ID of event creator\n- `organizationId` (number): Organization hosting the event"
+			},
+			"response": []
+		},
+		{
+			"name": "Get events/:eventId",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/events/:eventId",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"events",
+						":eventId"
+					],
+					"variable": [
+						{
+							"key": "eventId",
+							"value": "2"
+						}
+					]
+				},
+				"description": "### Get Event Details\n\nRetrieves details of a specific event by ID. **Public endpoint - no authentication required.**\n\n#### Path Parameters\n\n- `eventId` (integer): The unique identifier of the event\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns an array with one event object. Includes all event fields including `eventLengthHours`."
+			},
+			"response": []
+		},
+		{
+			"name": "Get events/search (city/state/date/organization)",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/events/search?city=San Diego",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"events",
+						"search"
+					],
+					"query": [
+						{
+							"key": "city",
+							"value": "San Diego"
+						},
+						{
+							"key": "state",
+							"value": "CA",
+							"disabled": true
+						},
+						{
+							"key": "date",
+							"value": "",
+							"disabled": true
+						},
+						{
+							"key": "organizationId",
+							"value": "1",
+							"disabled": true
+						}
+					]
+				},
+				"description": "### Search Events\n\nSearches events by optional filters (city, state, date, organization). **Public endpoint - no authentication required.**\n\n#### Query Parameters (all optional)\n\n- `city` (string): Filter by city name\n- `state` (string): Filter by state (2-letter code, e.g., \"CA\")\n- `date` (string): Filter by event date (ISO 8601 format: YYYY-MM-DD)\n- `organizationId` (number): Filter by organization ID\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns an array of matching event objects. All query parameters are optional - you can use any combination or none at all."
+			},
+			"response": []
+		},
+		{
+			"name": "Post events",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Successful POST request\", function () {",
+							"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"title\": \"Beach Cleanup\",\n    \"description\": \"Join us in cleaning up the beach to help the environment.\",\n    \"eventDate\": \"2025-03-01\",\n    \"eventTime\": \"09:00\",\n    \"eventLengthHours\": 4,\n    \"locationName\": \"Pacific Beach\",\n    \"address\": \"123 Beach Blvd, San Diego, CA\",\n    \"city\": \"San Diego\",\n    \"state\": \"CA\",\n    \"numNeeded\": 20,\n    \"numSignedUp\": 0,\n    \"createdBy\": 1,\n    \"organizationId\": 1\n}\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/events",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"events"
+					]
+				},
+				"description": "### Create New Event\n\nCreates a new event. **Requires authentication.** The associated organization must have 'approved' status.\n\n#### Authentication\n\n- Header: `Authorization: Bearer <jwt_token>`\n- Access: Organizer for the organization or Admin\n\n#### Request Body\n\n- `title` (string, required): Event title (1-200 characters)\n- `description` (string, required): Event description (1-2000 characters)\n- `eventDate` (string, required): Event date in format 'YYYY-MM-DD'\n- `eventTime` (string, required): Event time in format 'HH:MM' (24-hour)\n- `eventLengthHours` (number, optional): Duration in hours (1-24)\n- `locationName` (string, required): Name of location (1-200 characters)\n- `address` (string, required): Street address (1-200 characters)\n- `city` (string, required): City name (1-100 characters)\n- `state` (string, required): State code (2 uppercase letters, e.g., \"CA\")\n- `numNeeded` (number, required): Number of volunteers needed (1-10000)\n- `numSignedUp` (number, optional): Current signups (defaults to 0)\n- `createdBy` (number, required): User ID of creator\n- `organizationId` (number, required): Organization hosting the event\n\n#### Response\n\n- Status: 201 Created\n- Content-Type: application/json\n\nReturns MySQL result packet with `insertId` of the created event.\n\n**Note:** Event creation will fail (403) if the organization's approval status is 'pending' or 'rejected'."
+			},
+			"response": []
+		},
+		{
+			"name": "Update events",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Successful PUT request\", function () {",
+							"    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"eventId\": 1,\n    \"title\": \"Beach Cleanup - Updated\",\n    \"description\": \"Join us in cleaning up the beach to help the environment.\",\n    \"eventDate\": \"2025-03-01\",\n    \"eventTime\": \"09:00\",\n    \"eventLengthHours\": 5,\n    \"locationName\": \"Pacific Beach\",\n    \"address\": \"123 Beach Blvd, San Diego, CA\",\n    \"city\": \"San Diego\",\n    \"state\": \"CA\",\n    \"numNeeded\": 25,\n    \"numSignedUp\": 5,\n    \"createdBy\": 1,\n    \"organizationId\": 1\n}\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/events",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"events"
+					]
+				},
+				"description": "### Update Event\n\nUpdates an existing event. **Requires authentication.** The associated organization must have 'approved' status.\n\n#### Authentication\n\n- Header: `Authorization: Bearer <jwt_token>`\n- Access: Organizer for the event's organization or Admin\n\n#### Request Body\n\n- `eventId` (number, required): The unique identifier of the event to update\n- `title` (string, optional): Updated title\n- `description` (string, optional): Updated description\n- `eventDate` (string, optional): Updated date (YYYY-MM-DD)\n- `eventTime` (string, optional): Updated time (HH:MM format)\n- `eventLengthHours` (number, optional): Updated duration in hours (1-24)\n- `locationName` (string, optional): Updated location name\n- `address` (string, optional): Updated address\n- `city` (string, optional): Updated city\n- `state` (string, optional): Updated state (2-letter code)\n- `numNeeded` (number, optional): Updated volunteers needed\n- `numSignedUp` (number, optional): Updated signups count\n- `createdBy` (number, optional): Creator user ID\n- `organizationId` (number, optional): Organization ID\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns MySQL result packet with update confirmation.\n\n**Note:** Event update will fail (403) if the organization's approval status is 'pending' or 'rejected'."
+			},
+			"response": []
+		},
+		{
+			"name": "Delete events",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Successful DELETE request\", function () {",
+							"    pm.expect(pm.response.code).to.be.oneOf([200, 202, 204]);",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/events/:eventId",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"events",
+						":eventId"
+					],
+					"variable": [
+						{
+							"key": "eventId",
+							"value": "6"
+						}
+					]
+				},
+				"description": "### Delete Event\n\nDeletes a specific event. **Requires authentication.**\n\n#### Authentication\n\n- Header: `Authorization: Bearer <jwt_token>`\n- Access: Organizer for the event's organization or Admin\n\n#### Path Parameters\n\n- `eventId` (integer): The unique identifier of the event to delete\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns MySQL result packet with deletion confirmation."
+			},
+			"response": []
+		},
+		{
+			"name": "Get organizations",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/organizations",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"organizations"
+					]
+				},
+				"description": "### Get All Organizations\n\nRetrieves a list of all organizations. **Public endpoint - no authentication required.**\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns an array of organization objects with the following properties:\n\n- `organizationId` (number): Unique identifier\n- `name` (string): Organization name\n- `description` (string | null): Organization description\n- `contactEmail` (string): Contact email\n- `contactPhone` (string | null): Contact phone\n- `website` (string | null): Website URL\n- `approvalStatus` (string): Approval status ('pending', 'approved', or 'rejected')\n- `approvedBy` (number | null): User ID of admin who approved/rejected\n- `approvedAt` (string | null): Timestamp of approval/rejection\n- `rejectionReason` (string | null): Reason for rejection (if rejected)\n- `createdAt` (string): Creation timestamp\n- `updatedAt` (string): Last update timestamp"
+			},
+			"response": []
+		},
+		{
+			"name": "Get organizations/:id",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/organizations/:organization_id",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"organizations",
+						":organization_id"
+					],
+					"variable": [
+						{
+							"key": "organization_id",
+							"value": "3"
+						}
+					]
+				},
+				"description": "### Get Organization by ID\n\nRetrieves details of a specific organization by ID. **Public endpoint - no authentication required.**\n\n#### Path Parameters\n\n- `organization_id` (integer): The unique identifier of the organization\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns an array with one organization object. Includes all organization fields including approval status information."
+			},
+			"response": []
+		},
+		{
+			"name": "Get organizations/name/:name",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/organizations/name/:name",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"organizations",
+						"name",
+						":name"
+					],
+					"variable": [
+						{
+							"key": "name",
+							"value": "Helping Hands"
+						}
+					]
+				},
+				"description": "### Get Organization by Name\n\nRetrieves an organization by its name. **Public endpoint - no authentication required.**\n\n#### Path Parameters\n\n- `name` (string): The name of the organization\n\n#### Response\n\n- Status: 200 OK (if found) or 404 Not Found\n- Content-Type: application/json\n\nReturns a single organization object if found, or 404 error if not found."
+			},
+			"response": []
+		},
+		{
+			"name": "Post organization",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Successful POST request\", function () {",
+							"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"Helping Hands milestone 3\",\n    \"description\": \"A community-driven organization focused on volunteering efforts.\",\n    \"contactEmail\": \"info@helpinghands.org\",\n    \"contactPhone\": \"555-123-4567\",\n    \"website\": \"https://helpinghands.org\"\n}\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/organizations",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"organizations"
+					]
+				},
+				"description": "### Create Organization\n\nCreates a new organization. **Requires authentication.** Approval status defaults to 'pending'. Optionally links a user to the organization.\n\n#### Authentication\n\n- Header: `Authorization: Bearer <jwt_token>`\n- Access: Organizer or Admin\n\n#### Request Body\n\n- `name` (string, required): Organization name (1-200 characters, must be unique)\n- `description` (string, optional): Organization description (max 1000 characters)\n- `contactEmail` (string, required): Contact email (valid email format, max 150 characters)\n- `contactPhone` (string, optional): Contact phone (max 20 characters)\n- `website` (string, optional): Website URL (valid URL format, max 200 characters)\n- `userId` (number, optional): User ID to link to this organization (sets user as organizer)\n\n#### Response\n\n- Status: 201 Created\n- Content-Type: application/json\n\nReturns JSON object with `organizationId` (from `insertId`) and optional `userLinked` information if userId was provided.\n\n**Note:** New organizations are created with `approvalStatus: 'pending'` and must be approved by an admin before they can create events."
+			},
+			"response": []
+		},
+		{
+			"name": "Update organization",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Successful PUT request\", function () {",
+							"    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"organizationId\": 1,\n    \"name\": \"Helping Hands - Updated\",\n    \"description\": \"A community-driven organization focused on volunteering efforts.\",\n    \"contactEmail\": \"info@helpinghands.org\",\n    \"contactPhone\": \"555-123-4567\",\n    \"website\": \"https://helpinghands.org\"\n}\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/organizations",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"organizations"
+					]
+				},
+				"description": "### Update Organization\n\nUpdates an existing organization. **Requires authentication.** Regular fields can be updated by organizers/admins. Approval status fields can only be updated by admins.\n\n#### Authentication\n\n- Header: `Authorization: Bearer <jwt_token>`\n- Access: Organizer for the organization or Admin\n\n#### Request Body (Regular Fields)\n\n- `organizationId` (number, required): The unique identifier of the organization\n- `name` (string, optional): Updated name\n- `description` (string, optional): Updated description\n- `contactEmail` (string, optional): Updated contact email\n- `contactPhone` (string, optional): Updated contact phone\n- `website` (string, optional): Updated website URL\n\n#### Request Body (Approval Status - Admin Only)\n\n- `organizationId` (number, required): The unique identifier of the organization\n- `approvalStatus` (string, required): New status ('pending', 'approved', or 'rejected')\n- `rejectionReason` (string, optional): Reason for rejection (required if status is 'rejected', set to null if 'approved' or 'pending')\n\n**Note:** When updating approval status, `approvedBy` and `approvedAt` are automatically set. If status is 'approved' or 'pending', `rejectionReason` is automatically set to null.\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns MySQL result packet with update confirmation."
+			},
+			"response": []
+		},
+		{
+			"name": "Delete organization",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Successful DELETE request\", function () {",
+							"    pm.expect(pm.response.code).to.be.oneOf([200, 202, 204]);",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/organizations/:organizationId",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"organizations",
+						":organizationId"
+					],
+					"variable": [
+						{
+							"key": "organizationId",
+							"value": "7"
+						}
+					]
+				},
+				"description": "### Delete Organization\n\nDeletes a specific organization. **Requires authentication.**\n\n#### Authentication\n\n- Header: `Authorization: Bearer <jwt_token>`\n- Access: Organizer for the organization or Admin\n\n#### Path Parameters\n\n- `organizationId` (integer): The unique identifier of the organization to delete\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns MySQL result packet with deletion confirmation."
+			},
+			"response": []
+		},
+		{
+			"name": "Get signups",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/signups",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"signups"
+					]
+				},
+				"description": "### Get All Signups\n\nRetrieves a list of all signups. **Requires admin authentication.**\n\n#### Authentication\n\n- Header: `Authorization: Bearer <jwt_token>`\n- Access: Admin only\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns an array of signup objects with:\n\n- `signupId` (number): Unique identifier\n- `userId` (number): User who signed up\n- `eventId` (number): Event signed up for\n- `signupDate` (string): Date of signup\n- `status` (string): Signup status ('registered' or 'canceled')"
+			},
+			"response": []
+		},
+		{
+			"name": "Get signups/user/:userId",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/signups/user/:userId",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"signups",
+						"user",
+						":userId"
+					],
+					"variable": [
+						{
+							"key": "userId",
+							"value": "3"
+						}
+					]
+				},
+				"description": "### Get User Signups\n\nRetrieves all signups for a specific user. **Requires authentication.**\n\n#### Authentication\n\n- Header: `Authorization: Bearer <jwt_token>`\n- Access: Authenticated users\n\n#### Path Parameters\n\n- `userId` (integer): The unique identifier of the user\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns an array of signup objects for the specified user."
+			},
+			"response": []
+		},
+		{
+			"name": "Get signups/event/:eventId",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/signups/event/:eventId",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"signups",
+						"event",
+						":eventId"
+					],
+					"variable": [
+						{
+							"key": "eventId",
+							"value": "2"
+						}
+					]
+				},
+				"description": "### Get Signups for Event\n\nRetrieves all signups for a specific event. **Requires authentication.**\n\n#### Authentication\n\n- Header: `Authorization: Bearer <jwt_token>`\n- Access: Authenticated users\n\n#### Path Parameters\n\n- `eventId` (integer): The unique identifier of the event\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns an array of signup objects for the specified event."
+			},
+			"response": []
+		},
+		{
+			"name": "Post signups",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Successful POST request\", function () {",
+							"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"userId\": 1,\n    \"eventId\": 2\n}\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/signups",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"signups"
+					]
+				},
+				"description": "### Register User for Event\n\nRegisters a user for an event. **Requires authentication.** Automatically increments the event's signup count.\n\n#### Authentication\n\n- Header: `Authorization: Bearer <jwt_token>`\n- Access: Authenticated users\n\n#### Request Body\n\n- `userId` (number, required): The ID of the user registering\n- `eventId` (number, required): The ID of the event to register for\n\n**Note:** `signupDate` and `status` are automatically set to current date and 'registered' respectively.\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns MySQL result packet with `insertId` of the created signup.\n\n**Error:** Returns 400 if user is already signed up for this event."
+			},
+			"response": []
+		},
+		{
+			"name": "Delete signups:signupId",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Successful DELETE request\", function () {",
+							"    pm.expect(pm.response.code).to.be.oneOf([200, 202, 204]);",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/signups/:signupId",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"signups",
+						":signupId"
+					],
+					"query": [
+						{
+							"key": null,
+							"value": "",
+							"disabled": true
+						}
+					],
+					"variable": [
+						{
+							"key": "signupId",
+							"value": "12"
+						}
+					]
+				},
+				"description": "### Delete Signup (De-register)\n\nDe-registers a user from an event. **Requires authentication.** Automatically decrements the event's signup count.\n\n#### Authentication\n\n- Header: `Authorization: Bearer <jwt_token>`\n- Access: Authenticated users\n\n#### Path Parameters\n\n- `signupId` (integer): The unique identifier of the signup to delete\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns MySQL result packet with deletion confirmation."
+			},
+			"response": []
+		},
+		{
+			"name": "Get support-messages",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/support-messages",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"support-messages"
+					]
+				},
+				"description": "### Get All Support Messages\n\nRetrieves all support messages. **Requires authentication.**\n\n#### Authentication\n\n- Header: `Authorization: Bearer <jwt_token>`\n- Access: Authenticated users\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns an array of support message objects with:\n\n- `messageId` (number): Unique identifier\n- `userId` (number | null): User ID if logged in\n- `name` (string): Sender's name\n- `email` (string): Sender's email\n- `subject` (string): Message subject\n- `message` (string): Message content\n- `isResolved` (number): 0 = unresolved, 1 = resolved\n- `respondedBy` (number | null): User ID who responded\n- `responseMessage` (string | null): Response content\n- `createdAt` (string): Creation timestamp\n- `respondedAt` (string | null): Response timestamp"
+			},
+			"response": []
+		},
+		{
+			"name": "Get support-messages/:messageId",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/support-messages/:messageId",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"support-messages",
+						":messageId"
+					],
+					"variable": [
+						{
+							"key": "messageId",
+							"value": "1"
+						}
+					]
+				},
+				"description": "### Get Support Message by ID\n\nRetrieves a specific support message. **Requires authentication.**\n\n#### Authentication\n\n- Header: `Authorization: Bearer <jwt_token>`\n- Access: Authenticated users\n\n#### Path Parameters\n\n- `messageId` (integer): The unique identifier of the message\n\n#### Response\n\n- Status: 200 OK or 404 Not Found\n- Content-Type: application/json\n\nReturns a single support message object."
+			},
+			"response": []
+		},
+		{
+			"name": "Post support-messages",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Successful POST request\", function () {",
+							"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"John Doe\",\n    \"email\": \"john@example.com\",\n    \"subject\": \"Question about events\",\n    \"message\": \"I have a question about how to sign up for events.\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/support-messages",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"support-messages"
+					]
+				},
+				"description": "### Create Support Message\n\nCreates a new support message. **Requires authentication.**\n\n#### Authentication\n\n- Header: `Authorization: Bearer <jwt_token>`\n- Access: Authenticated users\n\n#### Request Body\n\n- `name` (string, required): Sender's name (1-100 characters)\n- `email` (string, required): Sender's email (valid email format, max 150 characters)\n- `subject` (string, required): Message subject (1-200 characters)\n- `message` (string, required): Message content (1-5000 characters)\n- `userId` (number, optional): User ID if logged in (automatically set from token)\n\n#### Response\n\n- Status: 201 Created\n- Content-Type: application/json\n\nReturns MySQL result packet with `insertId` of the created message."
+			},
+			"response": []
+		},
+		{
+			"name": "Update support-messages/:messageId",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Successful PUT request\", function () {",
+							"    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"isResolved\": 1,\n    \"responseMessage\": \"Thank you for your question. Here's the answer...\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/support-messages/:messageId",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"support-messages",
+						":messageId"
+					],
+					"variable": [
+						{
+							"key": "messageId",
+							"value": "1"
+						}
+					]
+				},
+				"description": "### Update Support Message\n\nUpdates a support message (typically to mark as resolved and add a response). **Public endpoint - no authentication required.**\n\n#### Request Body\n\n- `isResolved` (number, optional): 0 = unresolved, 1 = resolved\n- `responseMessage` (string, optional): Response content (max 5000 characters)\n- `respondedBy` (number, optional): User ID of responder (if authenticated)\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns MySQL result packet with update confirmation.\n\n**Note:** If `isResolved` is set to 1 and `responseMessage` is provided, `respondedAt` is automatically set to current timestamp."
+			},
+			"response": []
+		},
+		{
+			"name": "Delete support-messages/:messageId",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Successful DELETE request\", function () {",
+							"    pm.expect(pm.response.code).to.be.oneOf([200, 202, 204]);",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/support-messages/:messageId",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"support-messages",
+						":messageId"
+					],
+					"variable": [
+						{
+							"key": "messageId",
+							"value": "1"
+						}
+					]
+				},
+				"description": "### Delete Support Message\n\nDeletes a support message. **Requires authentication.**\n\n#### Authentication\n\n- Header: `Authorization: Bearer <jwt_token>`\n- Access: Authenticated users\n\n#### Path Parameters\n\n- `messageId` (integer): The unique identifier of the message to delete\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns MySQL result packet with deletion confirmation."
+			},
+			"response": []
+		},
+		{
+			"name": "Get event-attendance/event/:eventId",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/event-attendance/event/:eventId",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"event-attendance",
+						"event",
+						":eventId"
+					],
+					"variable": [
+						{
+							"key": "eventId",
+							"value": "1"
+						}
+					]
+				},
+				"description": "### Get Event Signups with Attendance\n\nRetrieves all signups for an event with their attendance status. **Requires authentication.**\n\n#### Authentication\n\n- Header: `Authorization: Bearer <jwt_token>`\n- Access: Organizer for the event's organization or Admin\n\n#### Path Parameters\n\n- `eventId` (integer): The unique identifier of the event\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns an array of objects with:\n\n- `signupId` (number): Signup identifier\n- `userId` (number): User ID\n- `eventId` (number): Event ID\n- `signupDate` (string): Date of signup\n- `status` (string): Signup status\n- `attendance` (object | null): Attendance record if marked\n  - `attendanceId` (number): Attendance identifier\n  - `signupId` (number): Signup ID\n  - `markedBy` (number): User who marked attendance\n  - `markedAt` (string): Timestamp when marked\n  - `hours` (number | null): Hours volunteered\n  - `status` (string): 'completed', 'no_show', or 'excused'"
+			},
+			"response": []
+		},
+		{
+			"name": "Get event-attendance/signup/:signupId",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/event-attendance/signup/:signupId",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"event-attendance",
+						"signup",
+						":signupId"
+					],
+					"variable": [
+						{
+							"key": "signupId",
+							"value": "1"
+						}
+					]
+				},
+				"description": "### Get Attendance by Signup ID\n\nRetrieves attendance record for a specific signup. **Requires authentication.**\n\n#### Authentication\n\n- Header: `Authorization: Bearer <jwt_token>`\n- Access: Authenticated users\n\n#### Path Parameters\n\n- `signupId` (integer): The unique identifier of the signup\n\n#### Response\n\n- Status: 200 OK or 404 Not Found\n- Content-Type: application/json\n\nReturns attendance object if found, or 404 if no attendance record exists."
+			},
+			"response": []
+		},
+		{
+			"name": "Post event-attendance",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Successful POST request\", function () {",
+							"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"signupId\": 1,\n    \"hours\": 4,\n    \"status\": \"completed\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/event-attendance",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"event-attendance"
+					]
+				},
+				"description": "### Mark Attendance\n\nMarks attendance for a signup. Creates a new record or updates existing one. **Requires authentication.**\n\n#### Authentication\n\n- Header: `Authorization: Bearer <jwt_token>`\n- Access: Organizer for the event's organization or Admin\n\n#### Request Body\n\n- `signupId` (number, required): The signup identifier\n- `hours` (number, optional): Hours volunteered (0-24)\n- `status` (string, required): 'completed', 'no_show', or 'excused'\n\n**Note:** `markedBy` is automatically set from the authenticated user's ID, and `markedAt` is set to current timestamp.\n\n#### Response\n\n- Status: 200 OK or 201 Created\n- Content-Type: application/json\n\nReturns MySQL result packet with `insertId` or update confirmation."
+			},
+			"response": []
+		},
+		{
+			"name": "Update event-attendance/:attendanceId",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Successful PUT request\", function () {",
+							"    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"hours\": 5,\n    \"status\": \"completed\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/event-attendance/:attendanceId",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"event-attendance",
+						":attendanceId"
+					],
+					"variable": [
+						{
+							"key": "attendanceId",
+							"value": "1"
+						}
+					]
+				},
+				"description": "### Update Attendance\n\nUpdates an existing attendance record. **Requires authentication.**\n\n#### Authentication\n\n- Header: `Authorization: Bearer <jwt_token>`\n- Access: Organizer for the event's organization or Admin\n\n#### Path Parameters\n\n- `attendanceId` (integer): The unique identifier of the attendance record\n\n#### Request Body\n\n- `hours` (number, optional): Updated hours volunteered (0-24)\n- `status` (string, optional): Updated status ('completed', 'no_show', or 'excused')\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns MySQL result packet with update confirmation."
+			},
+			"response": []
+		},
+		{
+			"name": "Delete event-attendance/:attendanceId",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Successful DELETE request\", function () {",
+							"    pm.expect(pm.response.code).to.be.oneOf([200, 202, 204]);",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/event-attendance/:attendanceId",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"event-attendance",
+						":attendanceId"
+					],
+					"variable": [
+						{
+							"key": "attendanceId",
+							"value": "1"
+						}
+					]
+				},
+				"description": "### Delete Attendance Record\n\nDeletes an attendance record. **Requires authentication.**\n\n#### Authentication\n\n- Header: `Authorization: Bearer <jwt_token>`\n- Access: Organizer for the event's organization or Admin\n\n#### Path Parameters\n\n- `attendanceId` (integer): The unique identifier of the attendance record to delete\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns MySQL result packet with deletion confirmation."
+			},
+			"response": []
+		},
+		{
+			"name": "Get certificates",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/certificates",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"certificates"
+					]
+				},
+				"description": "### Get All Certificates\n\nRetrieves all certificates. **Public endpoint - no authentication required.**\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns an array of certificate objects (without `verificationHash` for security):\n\n- `certificateId` (number): Unique identifier\n- `signupId` (number): Associated signup ID\n- `certificateUid` (string): Unique certificate identifier (e.g., \"VS-77U7-LDDW\")\n- `issuedAt` (string): Issue timestamp\n- `signedBy` (number | null): User ID who signed/issued\n- `pdfPath` (string | null): Path to PDF certificate file"
+			},
+			"response": []
+		},
+		{
+			"name": "Get certificates/:certificateId",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/certificates/:certificateId",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"certificates",
+						":certificateId"
+					],
+					"variable": [
+						{
+							"key": "certificateId",
+							"value": "1"
+						}
+					]
+				},
+				"description": "### Get Certificate by ID\n\nRetrieves a specific certificate by ID. **Public endpoint - no authentication required.**\n\n#### Path Parameters\n\n- `certificateId` (integer): The unique identifier of the certificate\n\n#### Response\n\n- Status: 200 OK or 404 Not Found\n- Content-Type: application/json\n\nReturns a single certificate object (without `verificationHash`)."
+			},
+			"response": []
+		},
+		{
+			"name": "Get certificates/user/:userId",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/certificates/user/:userId",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"certificates",
+						"user",
+						":userId"
+					],
+					"variable": [
+						{
+							"key": "userId",
+							"value": "1"
+						}
+					]
+				},
+				"description": "### Get Certificates by User ID\n\nRetrieves all certificates for a specific user. **Public endpoint - no authentication required.**\n\n#### Path Parameters\n\n- `userId` (integer): The unique identifier of the user\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns an array of certificate objects for the specified user."
+			},
+			"response": []
+		},
+		{
+			"name": "Get certificates/event/:eventId",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/certificates/event/:eventId",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"certificates",
+						"event",
+						":eventId"
+					],
+					"variable": [
+						{
+							"key": "eventId",
+							"value": "1"
+						}
+					]
+				},
+				"description": "### Get Certificates by Event ID\n\nRetrieves all certificates for a specific event. **Public endpoint - no authentication required.**\n\n#### Path Parameters\n\n- `eventId` (integer): The unique identifier of the event\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns an array of certificate objects for the specified event."
+			},
+			"response": []
+		},
+		{
+			"name": "Get certificates/uid/:certificateUid",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/certificates/uid/:certificateUid",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"certificates",
+						"uid",
+						":certificateUid"
+					],
+					"variable": [
+						{
+							"key": "certificateUid",
+							"value": "VS-77U7-LDDW"
+						}
+					]
+				},
+				"description": "### Get Certificate by UID\n\nRetrieves a certificate by its unique identifier (UID). **Public endpoint - no authentication required.** Verifies the certificate hash to ensure authenticity.\n\n#### Path Parameters\n\n- `certificateUid` (string): The unique certificate identifier (e.g., \"VS-77U7-LDDW\")\n\n#### Response\n\n- Status: 200 OK or 404 Not Found or 403 Forbidden (if hash verification fails)\n- Content-Type: application/json\n\nReturns a formatted certificate object with nested user, event, organization, and attendance information (without `verificationHash`)."
+			},
+			"response": []
+		},
+		{
+			"name": "Get certificates/verify/:certificateUid",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/certificates/verify/:certificateUid",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"certificates",
+						"verify",
+						":certificateUid"
+					],
+					"variable": [
+						{
+							"key": "certificateUid",
+							"value": "VS-77U7-LDDW"
+						}
+					]
+				},
+				"description": "### Verify Certificate\n\nPublic endpoint for verifying a certificate by UID. Same as GET by UID but specifically for verification purposes. **Public endpoint - no authentication required.**\n\n#### Path Parameters\n\n- `certificateUid` (string): The unique certificate identifier\n\n#### Response\n\n- Status: 200 OK (valid), 404 Not Found, or 403 Forbidden (tampered)\n- Content-Type: application/json\n\nReturns formatted certificate information if valid and verified."
+			},
+			"response": []
+		},
+		{
+			"name": "Post certificates",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Successful POST request\", function () {",
+							"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"signupId\": 1,\n    \"certificateUid\": \"VS-77U7-LDDW\",\n    \"verificationHash\": \"abc123...\",\n    \"pdfPath\": \"/path/to/certificate.pdf\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/certificates",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"certificates"
+					]
+				},
+				"description": "### Create Certificate\n\nCreates a new certificate for a signup. **Requires authentication.**\n\n#### Authentication\n\n- Header: `Authorization: Bearer <jwt_token>`\n- Access: Organizer for the event's organization or Admin\n\n#### Request Body\n\n- `signupId` (number, required): The signup identifier\n- `certificateUid` (string, required): Unique certificate identifier (must be unique, e.g., \"VS-XXXX-XXXX\")\n- `verificationHash` (string, required): SHA-256 hash of the certificate UID for verification\n- `pdfPath` (string, optional): Path to PDF certificate file\n\n**Note:** `signedBy` is automatically set from the authenticated user's ID, and `issuedAt` is set to current timestamp.\n\n#### Response\n\n- Status: 201 Created\n- Content-Type: application/json\n\nReturns JSON object with `certificateId` (from `insertId`) and other fields."
+			},
+			"response": []
+		},
+		{
+			"name": "Update certificates/:certificateId",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Successful PUT request\", function () {",
+							"    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"pdfPath\": \"/updated/path/to/certificate.pdf\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/certificates/:certificateId",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"certificates",
+						":certificateId"
+					],
+					"variable": [
+						{
+							"key": "certificateId",
+							"value": "1"
+						}
+					]
+				},
+				"description": "### Update Certificate\n\nUpdates an existing certificate. **Requires authentication.**\n\n#### Authentication\n\n- Header: `Authorization: Bearer <jwt_token>`\n- Access: Organizer for the event's organization or Admin\n\n#### Path Parameters\n\n- `certificateId` (integer): The unique identifier of the certificate\n\n#### Request Body\n\n- `certificateUid` (string, optional): Updated certificate UID (must be unique)\n- `verificationHash` (string, optional): Updated verification hash\n- `pdfPath` (string, optional): Updated PDF path\n\n**Note:** `signedBy` is automatically updated to the authenticated user's ID.\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns MySQL result packet with update confirmation."
+			},
+			"response": []
+		},
+		{
+			"name": "Delete certificates/:certificateId",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Successful DELETE request\", function () {",
+							"    pm.expect(pm.response.code).to.be.oneOf([200, 202, 204]);",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/certificates/:certificateId",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"certificates",
+						":certificateId"
+					],
+					"variable": [
+						{
+							"key": "certificateId",
+							"value": "1"
+						}
+					]
+				},
+				"description": "### Delete Certificate\n\nDeletes a certificate. **Requires authentication.**\n\n#### Authentication\n\n- Header: `Authorization: Bearer <jwt_token>`\n- Access: Organizer for the event's organization or Admin\n\n#### Path Parameters\n\n- `certificateId` (integer): The unique identifier of the certificate to delete\n\n#### Response\n\n- Status: 200 OK\n- Content-Type: application/json\n\nReturns MySQL result packet with deletion confirmation."
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "https://localhost:5000",
+			"type": "string"
+		},
+		{
+			"key": "jwt_token",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

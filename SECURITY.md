@@ -115,7 +115,7 @@ Multiple layers of input length protection:
 - No server-side HTML rendering
 - Proper Content-Type headers set automatically
 
-## 🔒 Additional Security Features
+## Additional Security Features
 
 ### JWT Authentication
 - Token-based authentication
@@ -130,18 +130,8 @@ Multiple layers of input length protection:
 - Restricted to specific origins
 - Credentials support for authenticated requests
 
-## 📝 Notes on CSRF Protection
 
-**CSRF protection is NOT implemented** because:
-
-- REST APIs using JWT tokens in `Authorization` headers are not vulnerable to CSRF attacks
-- CSRF attacks rely on cookies being automatically sent with requests
-- JWT tokens in headers require explicit client-side code to include them
-- Adding CSRF tokens would add unnecessary complexity for REST APIs
-
-If you need CSRF protection (e.g., for cookie-based sessions), you can add it using the `csrf` package that's already installed.
-
-## 🚀 Usage Examples
+## Usage Examples
 
 ### Adding Validation to a Route
 
@@ -169,20 +159,7 @@ router.post('/sensitive-endpoint',
 );
 ```
 
-## 🔍 Security Checklist
-
-- ✅ SQL Injection: Parameterized queries used everywhere
-- ✅ XSS: Input sanitization + validation + CSP headers
-- ✅ Rate Limiting: Applied to all endpoints, stricter on auth
-- ✅ Input Validation: Comprehensive validation rules
-- ✅ Output Encoding: JSON encoding for all responses
-- ✅ Security Headers: Helmet with enhanced CSP
-- ✅ Input Length Limits: Body parser + field-specific limits
-- ✅ Authentication: JWT token-based auth
-- ✅ HTTPS: SSL/TLS support
-- ⚠️ CSRF: Not needed for JWT-based REST APIs
-
-## 📚 References
+## References
 
 - [OWASP Top 10](https://owasp.org/www-project-top-ten/)
 - [Express Security Best Practices](https://expressjs.com/en/advanced/best-practice-security.html)
