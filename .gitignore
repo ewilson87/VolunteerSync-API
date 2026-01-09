@@ -43,5 +43,10 @@ ssl/
 *.p12
 *.pfx
 
-# Local changelog (keep local only)
-CHANGELOG_Since_Nov_23.md 
+# Local documentation files (keep local only)
+CHANGELOG_Since_Nov_23.md
+LOGGING.md
+METRICS_API.md
+TAGS_API.md
+USER_FOLLOW_API.md
+SECURITY.md 
