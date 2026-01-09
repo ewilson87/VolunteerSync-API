@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as UsersController from './users.controller';
-import { authenticateToken, requireAdmin, requireUserOrAdmin } from '../middleware/auth.middleware';
+import { authenticateToken, requireAdmin, requireUserOrAdmin, requireOrganizerOrAdmin } from '../middleware/auth.middleware';
 import { authLimiter, registerLimiter } from '../middleware/rate-limit.middleware';
 import { commonValidations, validate } from '../middleware/validation.middleware';
 
@@ -57,5 +57,9 @@ router.
 router.
     route('/users/:userId/link-organization').
     post(authenticateToken, requireAdmin, UsersController.linkUserToOrganization);
+
+router.
+    route('/users/organization/members').
+    get(authenticateToken, requireOrganizerOrAdmin, UsersController.readOrganizationMembers);
 
 export default router;

@@ -2,6 +2,8 @@ import { Request, RequestHandler, Response } from 'express';
 import { OkPacket } from 'mysql';
 import * as SignupsDao from './signups.dao';
 import * as EventsDao from '../events/events.dao';
+import { AuthenticatedRequest } from '../middleware/auth.middleware';
+import { recordAuditEvent } from '../services/audit.service';
 
 /**
  * Retrieves all signups from the database.
@@ -74,10 +76,24 @@ export const readSignupsByEventId: RequestHandler = async (req: Request, res: Re
  * @param {number} req.body.eventId - The ID of the event to register for
  * @returns {Promise<void>} JSON object with creation result
  */
-export const createSignup: RequestHandler = async (req: Request, res: Response) => {
+export const createSignup: RequestHandler = async (req: AuthenticatedRequest, res: Response) => {
     try {
         const okPacket: OkPacket = await SignupsDao.createSignup(req.body);
         await EventsDao.incrementSignupCount(req.body.eventId);
+        
+        // Record audit event for successful signup
+        await recordAuditEvent({
+            userId: req.user?.userId || req.body.userId,
+            actionType: 'create',
+            entityType: 'signup',
+            entityId: okPacket.insertId,
+            details: {
+                eventId: req.body.eventId,
+                userId: req.user?.userId || req.body.userId
+            },
+            ipAddress: req.ip
+        });
+
         res.status(200).json(okPacket);
     } catch (error: any) {
         console.error('[signups.controller][createSignup][Error] ', error);

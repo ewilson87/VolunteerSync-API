@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { recordAuditEvent } from '../services/audit.service';
 
 /**
  * Extended Express Request interface that includes authenticated user information.
@@ -29,6 +30,20 @@ export const authenticateToken = (req: AuthenticatedRequest, res: Response, next
     const token = authHeader && authHeader.split(' ')[1];
 
     if (!token) {
+        // Record audit event for unauthorized access attempt (no token)
+        recordAuditEvent({
+            actionType: 'unauthorized_access',
+            entityType: 'auth',
+            details: {
+                reason: 'missing_token',
+                path: req.path,
+                method: req.method
+            },
+            ipAddress: req.ip
+        }).catch(() => {
+            // Silently fail if audit logging fails
+        });
+
         res.status(401).json({
             message: 'Access token is required'
         });
@@ -39,6 +54,21 @@ export const authenticateToken = (req: AuthenticatedRequest, res: Response, next
 
     jwt.verify(token, jwtSecret, (err, decoded) => {
         if (err) {
+            // Record audit event for unauthorized access attempt (invalid/expired token)
+            recordAuditEvent({
+                actionType: 'unauthorized_access',
+                entityType: 'auth',
+                details: {
+                    reason: err.name === 'TokenExpiredError' ? 'expired_token' : 'invalid_token',
+                    path: req.path,
+                    method: req.method,
+                    error: err.name
+                },
+                ipAddress: req.ip
+            }).catch(() => {
+                // Silently fail if audit logging fails
+            });
+
             res.status(403).json({
                 message: 'Invalid or expired token'
             });
@@ -147,6 +177,13 @@ export const requireOrganizerOrAdmin = (req: AuthenticatedRequest, res: Response
         organizationId = parseInt(req.params.organizationId);
     } else if (req.body.organizationId) {
         organizationId = parseInt(req.body.organizationId);
+    }
+
+    // If no organizationId is provided and user is an organizer, allow them through
+    // (they'll use their own organizationId from the token)
+    if (req.user.role === 'organizer' && !organizationId) {
+        next();
+        return;
     }
 
     if (req.params.eventId && !organizationId) {
@@ -271,5 +308,59 @@ export const requireOrganizerForBodyOrganizationOrAdmin = (req: AuthenticatedReq
     res.status(403).json({
         message: 'Access denied. You must be an organizer for this organization or an admin.'
     });
+};
+
+/**
+ * Middleware to require volunteer role for access.
+ * Must be used after authenticateToken middleware.
+ * 
+ * @param {AuthenticatedRequest} req - Express request object with authenticated user
+ * @param {Response} res - Express response object
+ * @param {NextFunction} next - Express next function
+ * @returns {void}
+ */
+export const requireVolunteer = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+        res.status(401).json({
+            message: 'Authentication required'
+        });
+        return;
+    }
+
+    if (req.user.role !== 'volunteer') {
+        res.status(403).json({
+            message: 'Volunteer access required'
+        });
+        return;
+    }
+
+    next();
+};
+
+/**
+ * Middleware to require organizer role for access.
+ * Must be used after authenticateToken middleware.
+ * 
+ * @param {AuthenticatedRequest} req - Express request object with authenticated user
+ * @param {Response} res - Express response object
+ * @param {NextFunction} next - Express next function
+ * @returns {void}
+ */
+export const requireOrganizer = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+        res.status(401).json({
+            message: 'Authentication required'
+        });
+        return;
+    }
+
+    if (req.user.role !== 'organizer') {
+        res.status(403).json({
+            message: 'Organizer access required'
+        });
+        return;
+    }
+
+    next();
 };
 

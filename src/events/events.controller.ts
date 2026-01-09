@@ -3,6 +3,8 @@ import { Event } from './events.model';
 import * as EventsDao from './events.dao';
 import * as OrganizationsDao from '../organizations/organizations.dao';
 import { OkPacket } from 'mysql';
+import { AuthenticatedRequest } from '../middleware/auth.middleware';
+import { recordAuditEvent } from '../services/audit.service';
 
 /**
  * Retrieves all events from the database.
@@ -81,7 +83,7 @@ export const searchEvents: RequestHandler = async (req: Request, res: Response) 
  * @param {Object} req.body - Event data including title, description, eventDate, etc.
  * @returns {Promise<void>} JSON object with creation result
  */
-export const createEvent: RequestHandler = async (req: Request, res: Response) => {
+export const createEvent: RequestHandler = async (req: AuthenticatedRequest, res: Response) => {
     try {
         const organizationId = req.body.organizationId;
         if (organizationId) {
@@ -98,6 +100,23 @@ export const createEvent: RequestHandler = async (req: Request, res: Response) =
         }
 
         const okPacket: OkPacket = await EventsDao.createEvent(req.body);
+        
+        // Record audit event for successful event creation
+        await recordAuditEvent({
+            userId: req.user?.userId,
+            actionType: 'create',
+            entityType: 'event',
+            entityId: okPacket.insertId,
+            details: {
+                title: req.body.title,
+                organizationId: req.body.organizationId,
+                eventDate: req.body.eventDate,
+                city: req.body.city,
+                state: req.body.state
+            },
+            ipAddress: req.ip
+        });
+
         res.status(201).json(okPacket);
     } catch (error: any) {
         console.error('[events.controller][createEvent][Error] ', error);
@@ -126,7 +145,7 @@ export const createEvent: RequestHandler = async (req: Request, res: Response) =
  * @param {Object} req.body - Updated event data
  * @returns {Promise<void>} JSON object with update result
  */
-export const updateEvent: RequestHandler = async (req: Request, res: Response) => {
+export const updateEvent: RequestHandler = async (req: AuthenticatedRequest, res: Response) => {
     try {
         const eventId = req.body.eventId;
         if (!eventId) {
@@ -161,6 +180,25 @@ export const updateEvent: RequestHandler = async (req: Request, res: Response) =
         }
 
         const okPacket: OkPacket = await EventsDao.updateEvent(req.body);
+        
+        // Record audit event for successful event update
+        const updatedFields = Object.keys(req.body).filter(key => 
+            key !== 'eventId' && req.body[key] !== undefined
+        );
+        
+        await recordAuditEvent({
+            userId: req.user?.userId,
+            actionType: 'update',
+            entityType: 'event',
+            entityId: eventId,
+            details: {
+                updatedFields: updatedFields,
+                title: req.body.title || existingEvent.title,
+                organizationId: organizationId
+            },
+            ipAddress: req.ip
+        });
+
         res.status(200).json(okPacket);
     } catch (error: any) {
         console.error('[events.controller][updateEvent][Error] ', error);

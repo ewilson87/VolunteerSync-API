@@ -14,6 +14,7 @@ export const organizationQueries = {
             created_at AS createdAt,
             updated_at AS updatedAt
         FROM volunteersync.organizations
+        ORDER BY name ASC
     `,
 
     readOrganizationById: `

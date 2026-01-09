@@ -7,6 +7,8 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
 import crypto from 'crypto';
+import { recordAuditEvent } from '../services/audit.service';
+import logger from '../services/logger.service';
 
 /**
  * Retrieves all users from the database.
@@ -177,7 +179,6 @@ export const createUser: RequestHandler = async (req: Request, res: Response) =>
 export const updateUser: RequestHandler = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
         const authenticatedUser = req.user;
-        const userIdToUpdate = req.body.userId;
 
         if (!authenticatedUser) {
             res.status(401).json({
@@ -186,11 +187,130 @@ export const updateUser: RequestHandler = async (req: AuthenticatedRequest, res:
             return;
         }
 
-        if (authenticatedUser.userId !== userIdToUpdate && authenticatedUser.role !== 'admin') {
+        // Determine userId - can come from body.userId or body.email (for organizers)
+        let userIdToUpdate: number | undefined = req.body.userId;
+        const emailToUpdate = req.body.email;
+        const isAdmin = authenticatedUser.role === 'admin';
+        const isOrganizer = authenticatedUser.role === 'organizer';
+
+        // If organizer is using email instead of userId, look up the user by email
+        if (isOrganizer && !userIdToUpdate && emailToUpdate) {
+            const usersByEmail = await UsersDao.readUserByEmail(emailToUpdate);
+            if (!usersByEmail || usersByEmail.length === 0) {
+                res.status(404).json({
+                    message: 'User not found'
+                });
+                return;
+            }
+            userIdToUpdate = usersByEmail[0].userId;
+        }
+
+        // Validate that we have a userId at this point
+        if (!userIdToUpdate) {
+            res.status(400).json({
+                message: 'Either userId or email must be provided'
+            });
+            return;
+        }
+
+        // Get current user data to check permissions and validate changes
+        const currentUser = await UsersDao.readUserById(userIdToUpdate);
+        if (!currentUser || currentUser.length === 0) {
+            res.status(404).json({
+                message: 'User not found'
+            });
+            return;
+        }
+
+        const currentUserData = currentUser[0];
+        const isSelfUpdate = authenticatedUser.userId === userIdToUpdate;
+
+        // Permission check: Users can update themselves, admins can update anyone, organizers have limited permissions
+        if (!isSelfUpdate && !isAdmin && !isOrganizer) {
+            res.status(403).json({
+                message: 'You can only update your own profile unless you are an admin or organizer'
+            });
+            return;
+        }
+
+        // Organizer-specific restrictions: can only promote volunteers to organizers and set organization_id
+        if (isOrganizer && !isSelfUpdate) {
+            // Organizers can only change role from volunteer to organizer
+            const newRole = req.body.role;
+            if (newRole && newRole !== currentUserData.role) {
+                if (currentUserData.role !== 'volunteer' || newRole !== 'organizer') {
+                    res.status(403).json({
+                        message: 'Organizers can only promote volunteers to organizer role'
+                    });
+                    return;
+                }
+            }
+
+            // Organizers can only set organization_id to their own organization
+            const newOrganizationId = req.body.organizationId;
+            if (newOrganizationId !== undefined && newOrganizationId !== authenticatedUser.organizationId) {
+                res.status(403).json({
+                    message: 'Organizers can only assign users to their own organization'
+                });
+                return;
+            }
+
+            // Organizers cannot change any other fields (preserve existing values)
+            const userData: User = {
+                userId: userIdToUpdate,
+                firstName: currentUserData.firstName,
+                lastName: currentUserData.lastName,
+                email: currentUserData.email,
+                passwordHash: currentUserData.passwordHash,
+                role: newRole || currentUserData.role,
+                organizationId: newOrganizationId !== undefined ? newOrganizationId : currentUserData.organizationId
+            };
+
+            const okPacket: OkPacket = await UsersDao.updateUser(userData);
+
+            // Record audit event for organizer promoting user
+            await recordAuditEvent({
+                userId: authenticatedUser.userId,
+                actionType: 'update',
+                entityType: 'user',
+                entityId: userIdToUpdate,
+                details: {
+                    updatedUserId: userIdToUpdate,
+                    oldRole: currentUserData.role,
+                    newRole: userData.role,
+                    oldOrganizationId: currentUserData.organizationId,
+                    newOrganizationId: userData.organizationId,
+                    updatedUserEmail: currentUserData.email,
+                    actionBy: 'organizer'
+                },
+                ipAddress: req.ip
+            });
+
+            res.status(200).json(okPacket);
+            return;
+        }
+
+        // Admin and self-update logic (full update allowed)
+        if (!isSelfUpdate && !isAdmin) {
             res.status(403).json({
                 message: 'You can only update your own profile unless you are an admin'
             });
             return;
+        }
+
+        const newRole = req.body.role;
+
+        // Protection: Cannot change role of the only remaining admin
+        if (currentUserData.role === 'admin' && newRole && newRole !== 'admin') {
+            const adminCountResult = await UsersDao.countAdminUsers();
+            const adminCount = adminCountResult && adminCountResult.length > 0 ? adminCountResult[0].adminCount : 0;
+
+            if (adminCount <= 1) {
+                res.status(403).json({
+                    message: 'Cannot change the role of the only remaining admin account. At least one admin must exist.'
+                });
+                return;
+            }
         }
 
         const userData: User = { ...req.body };
@@ -203,6 +323,24 @@ export const updateUser: RequestHandler = async (req: AuthenticatedRequest, res:
         }
 
         const okPacket: OkPacket = await UsersDao.updateUser(userData);
+
+        // Record audit event if role was changed by admin
+        if (isAdmin && newRole && newRole !== currentUserData.role) {
+            await recordAuditEvent({
+                userId: authenticatedUser.userId,
+                actionType: 'update',
+                entityType: 'user',
+                entityId: userIdToUpdate,
+                details: {
+                    updatedUserId: userIdToUpdate,
+                    oldRole: currentUserData.role,
+                    newRole: newRole,
+                    updatedUserEmail: currentUserData.email
+                },
+                ipAddress: req.ip
+            });
+        }
+
         res.status(200).json(okPacket);
     } catch (error: any) {
         console.error('[users.controller][updateUser][Error] ', error);
@@ -230,9 +368,25 @@ export const updateUser: RequestHandler = async (req: AuthenticatedRequest, res:
  * @param {number} req.params.userId - The ID of the user to delete
  * @returns {Promise<void>} JSON object with deletion result
  */
-export const deleteUser: RequestHandler = async (req: Request, res: Response) => {
+export const deleteUser: RequestHandler = async (req: AuthenticatedRequest, res: Response) => {
     try {
+        const authenticatedUser = req.user;
         const userId = parseInt(req.params.userId);
+
+        if (!authenticatedUser) {
+            res.status(401).json({
+                message: 'Authentication required'
+            });
+            return;
+        }
+
+        // Protection: Admin cannot delete their own account
+        if (authenticatedUser.userId === userId) {
+            res.status(403).json({
+                message: 'You cannot delete your own account'
+            });
+            return;
+        }
 
         const user = await UsersDao.readUserById(userId);
 
@@ -245,12 +399,40 @@ export const deleteUser: RequestHandler = async (req: Request, res: Response) =>
 
         const userData = user[0];
 
+        // Protection: Cannot delete the only remaining admin
+        if (userData.role === 'admin') {
+            const adminCountResult = await UsersDao.countAdminUsers();
+            const adminCount = adminCountResult && adminCountResult.length > 0 ? adminCountResult[0].adminCount : 0;
+
+            if (adminCount <= 1) {
+                res.status(403).json({
+                    message: 'Cannot delete the only remaining admin account. At least one admin must exist.'
+                });
+                return;
+            }
+        }
+
         if (userData.role === 'organizer' && userData.organizationId) {
             await OrganizationsDao.deleteOrganization(userData.organizationId);
             console.log(`Organization ${userData.organizationId} deleted as part of user ${userId} deletion`);
         }
 
         const response = await UsersDao.deleteUser(userId);
+
+        // Record audit event
+        await recordAuditEvent({
+            userId: authenticatedUser.userId,
+            actionType: 'delete',
+            entityType: 'user',
+            entityId: userId,
+            details: {
+                deletedUserId: userId,
+                deletedUserEmail: userData.email,
+                deletedUserRole: userData.role
+            },
+            ipAddress: req.ip
+        });
+
         res.status(200).json(response);
     } catch (error) {
         console.error('[users.controller][deleteUser][Error] ', error);
@@ -349,6 +531,19 @@ export const login: RequestHandler = async (req: Request, res: Response) => {
             { expiresIn: '24h' }
         );
 
+        // Record audit event for successful login
+        await recordAuditEvent({
+            userId: user.userId,
+            actionType: 'login',
+            entityType: 'auth',
+            details: {
+                email: user.email,
+                role: user.role,
+                organizationId: user.organizationId
+            },
+            ipAddress: req.ip
+        });
+
         res.status(200).json({
             token,
             user: {
@@ -427,6 +622,95 @@ export const linkUserToOrganization: RequestHandler = async (req: Request, res: 
         console.error('[users.controller][linkUserToOrganization][Error] ', error);
         res.status(500).json({
             message: 'There was an error linking the user to the organization'
+        });
+    }
+};
+
+/**
+ * Retrieves a list of users in the same organization as the authenticated organizer.
+ * Returns only firstName, lastName, and email for privacy.
+ * 
+ * @route GET /users/organization/members
+ * @access Private (Organizer or Admin)
+ * @returns {Promise<void>} JSON array of users with limited fields
+ */
+export const readOrganizationMembers: RequestHandler = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const authenticatedUser = req.user;
+
+        if (!authenticatedUser) {
+            res.status(401).json({
+                message: 'Authentication required'
+            });
+            return;
+        }
+
+        const isAdmin = authenticatedUser.role === 'admin';
+        const isOrganizer = authenticatedUser.role === 'organizer';
+
+        if (!isAdmin && !isOrganizer) {
+            res.status(403).json({
+                message: 'Only organizers and admins can view organization members'
+            });
+            return;
+        }
+
+        // Determine which organizationId to use
+        let organizationId: number | null = null;
+
+        if (isAdmin) {
+            // Admins can optionally specify an organizationId via query parameter
+            // If not provided and admin has an organizationId, use that
+            // Otherwise, require the query parameter
+            const orgIdParam = req.query.organizationId;
+            if (orgIdParam) {
+                organizationId = parseInt(orgIdParam as string);
+                if (isNaN(organizationId) || organizationId <= 0) {
+                    res.status(400).json({
+                        message: 'organizationId must be a positive integer'
+                    });
+                    return;
+                }
+            } else if (authenticatedUser.organizationId) {
+                organizationId = authenticatedUser.organizationId;
+            } else {
+                res.status(400).json({
+                    message: 'organizationId query parameter is required for admins without an organization'
+                });
+                return;
+            }
+        } else if (isOrganizer) {
+            // Organizers use their own organizationId from token
+            if (!authenticatedUser.organizationId) {
+                res.status(400).json({
+                    message: 'User is not associated with an organization'
+                });
+                return;
+            }
+            organizationId = authenticatedUser.organizationId;
+        }
+
+        const members = await UsersDao.readUsersByOrganizationId(organizationId);
+
+        logger.info('Retrieved organization members', {
+            requestId: (req as any).requestId,
+            organizationId,
+            count: members.length,
+            requestedBy: authenticatedUser.userId
+        });
+
+        res.status(200).json(members);
+    } catch (error) {
+        const requestId = (req as any).requestId;
+        logger.error('Error fetching organization members', {
+            requestId,
+            error: error instanceof Error ? {
+                message: error.message,
+                stack: error.stack
+            } : error
+        });
+        res.status(500).json({
+            message: 'There was an error fetching organization members'
         });
     }
 };

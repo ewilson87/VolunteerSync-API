@@ -52,5 +52,23 @@ export const userQueries = {
         UPDATE volunteersync.users
         SET last_login = NOW()
         WHERE user_id = ?
+    `,
+
+    // Query to count admin users
+    countAdminUsers: `
+        SELECT COUNT(*) AS adminCount
+        FROM volunteersync.users
+        WHERE role = 'admin'
+    `,
+
+    // Query to fetch users by organization_id (limited fields for organizers)
+    readUsersByOrganizationId: `
+        SELECT 
+            first_name AS firstName,
+            last_name AS lastName,
+            email
+        FROM volunteersync.users
+        WHERE organization_id = ?
+        ORDER BY first_name ASC, last_name ASC
     `
 };

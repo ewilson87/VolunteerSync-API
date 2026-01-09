@@ -68,3 +68,20 @@ export const deleteUser = async (userId: number) => {
 export const updateLastLogin = async (userId: number) => {
     return execute<OkPacket>(userQueries.updateLastLogin, [userId]);
 };
+
+/**
+ * Counts the number of admin users in the database.
+ * @returns {Promise<{ adminCount: number }[]>} Array with admin count
+ */
+export const countAdminUsers = async () => {
+    return execute<{ adminCount: number }[]>(userQueries.countAdminUsers, []);
+};
+
+/**
+ * Retrieves users by organization_id (limited fields: firstName, lastName, email).
+ * @param {number} organizationId - The unique identifier of the organization
+ * @returns {Promise<{ firstName: string; lastName: string; email: string }[]>} Array of user objects with limited fields
+ */
+export const readUsersByOrganizationId = async (organizationId: number) => {
+    return execute<{ firstName: string; lastName: string; email: string }[]>(userQueries.readUsersByOrganizationId, [organizationId]);
+};

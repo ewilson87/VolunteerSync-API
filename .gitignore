@@ -41,4 +41,7 @@ ssl/
 *.crt
 *.pem
 *.p12
-*.pfx 
+*.pfx
+
+# Local changelog (keep local only)
+CHANGELOG_Since_Nov_23.md 

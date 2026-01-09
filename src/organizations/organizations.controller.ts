@@ -3,6 +3,7 @@ import { OkPacket } from 'mysql';
 import * as OrganizationsDao from './organizations.dao';
 import * as UsersDao from '../users/users.dao';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
+import { recordAuditEvent } from '../services/audit.service';
 
 /**
  * Retrieves all organizations from the database.
@@ -201,6 +202,20 @@ export const updateOrganization: RequestHandler = async (req: AuthenticatedReque
                 approvalTimestamp,
                 finalRejectionReason
             );
+
+            // Record audit event for organization approval/rejection
+            await recordAuditEvent({
+                userId: adminUserId,
+                actionType: approvalStatus === 'approved' ? 'approve' : approvalStatus === 'rejected' ? 'reject' : 'update',
+                entityType: 'organization',
+                entityId: organizationData.organizationId,
+                details: {
+                    approvalStatus: approvalStatus,
+                    rejectionReason: finalRejectionReason,
+                    organizationName: organizationData.name || 'Unknown'
+                },
+                ipAddress: req.ip
+            });
 
             res.status(200).json(okPacket);
             return;
